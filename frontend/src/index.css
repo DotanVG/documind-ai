@@ -1,0 +1,10 @@
+/* Import Tailwind CSS */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* You can add any global styles here */
+body {
+  @apply min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500;
+}
