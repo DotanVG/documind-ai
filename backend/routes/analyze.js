@@ -1,14 +1,16 @@
 // routes/analyze.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs').promises;
-const path = require('path');
 const { analyzeDocument } = require('../services/aiService');
 
 router.post('/', async (req, res, next) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
+        console.log('Received file:', req.file); // Log the entire file object
+
+        if (!req.file || !req.file.buffer) {
+            return res
+                .status(400)
+                .json({ error: 'No file uploaded or file buffer is missing' });
         }
 
         const { query } = req.body;
@@ -16,25 +18,24 @@ router.post('/', async (req, res, next) => {
             return res.status(400).json({ error: 'No query provided' });
         }
 
-        const filePath = path.join(__dirname, '..', req.file.path);
-        const fileContent = await fs.readFile(filePath, 'utf8');
-
         // Check file size
-        const fileSizeInMB = fileContent.length / (1024 * 1024);
+        const fileSizeInMB = req.file.size / (1024 * 1024);
         if (fileSizeInMB > 10) {
             // Adjust this limit as needed
-            return res
-                .status(413)
-                .json({
-                    error: 'File size exceeds the maximum limit of 10MB. Please upload a smaller file.',
-                });
+            return res.status(413).json({
+                error: 'File size exceeds the maximum limit of 10MB. Please upload a smaller file.',
+            });
         }
 
-        // Analyze the document using AI
-        const result = await analyzeDocument(fileContent, query);
+        console.log('File type:', req.file.mimetype); // Log the file type
+        console.log('Query:', query); // Log the query
 
-        // Delete the uploaded file after analysis
-        await fs.unlink(filePath);
+        // Analyze the document using AI
+        const result = await analyzeDocument(
+            req.file.buffer,
+            req.file.mimetype,
+            query
+        );
 
         res.json({ result });
     } catch (error) {

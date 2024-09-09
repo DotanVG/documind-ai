@@ -2,7 +2,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const db = require('./db');
 const { initializeRedisClient } = require('./services/cacheService');
 
 // Import routes

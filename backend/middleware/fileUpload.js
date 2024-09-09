@@ -1,25 +1,6 @@
 // middleware/fileUpload.js
 const multer = require('multer');
 const path = require('path');
-const crypto = require('crypto');
-
-/**
- * Configures storage settings for multer.
- * Files are saved with a unique name to prevent overwrites.
- */
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        // Generate a unique suffix for the filename
-        const uniqueSuffix = crypto.randomBytes(8).toString('hex');
-        cb(
-            null,
-            `${Date.now()}-${uniqueSuffix}${path.extname(file.originalname)}`
-        );
-    },
-});
 
 /**
  * Filters files based on allowed types.
@@ -47,7 +28,7 @@ const fileFilter = (req, file, cb) => {
  */
 const createUploadMiddleware = () => {
     return multer({
-        storage: storage,
+        storage: multer.memoryStorage(), // Store file in memory as a Buffer
         limits: {
             fileSize: 10 * 1024 * 1024, // Limit file size to 10MB
         },

@@ -2,12 +2,28 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
 const { getCachedValue, setCachedValue } = require('./cacheService');
+const pdf = require('pdf-parse');
 
 dotenv.config();
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
+
+/**
+ * Parses the content of a PDF file.
+ * @param {Buffer} pdfBuffer - The buffer containing the PDF file
+ * @returns {Promise<string>} - The extracted text from the PDF
+ */
+async function parsePDF(pdfBuffer) {
+    try {
+        const data = await pdf(pdfBuffer);
+        return data.text;
+    } catch (error) {
+        console.error('Error parsing PDF:', error);
+        throw new Error('Failed to parse PDF file');
+    }
+}
 
 /**
  * Splits the document into very small chunks.
@@ -17,19 +33,19 @@ const openai = new OpenAI({
  */
 function splitIntoChunks(text, maxChars = 500) {
     const chunks = [];
-  let currentChunk = "";
-  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+    let currentChunk = '';
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
 
     for (const sentence of sentences) {
-    if (currentChunk.length + sentence.length > maxChars) {
-      chunks.push(currentChunk.trim());
-      currentChunk = "";
+        if (currentChunk.length + sentence.length > maxChars) {
+            chunks.push(currentChunk.trim());
+            currentChunk = '';
         }
-    currentChunk += sentence + " ";
+        currentChunk += sentence + ' ';
     }
 
-  if (currentChunk) {
-    chunks.push(currentChunk.trim());
+    if (currentChunk) {
+        chunks.push(currentChunk.trim());
     }
 
     return chunks;
@@ -43,12 +59,16 @@ function splitIntoChunks(text, maxChars = 500) {
  */
 async function analyzeChunk(chunk, query) {
     const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+        model: 'gpt-3.5-turbo',
         messages: [
-      {role: "system", content: "Analyze this text snippet very briefly, focusing only on information relevant to the query."},
-      {role: "user", content: `Text: ${chunk}\n\nQuery: ${query}`}
+            {
+                role: 'system',
+                content:
+                    'Analyze this text snippet very briefly, focusing only on information relevant to the query.',
+            },
+            { role: 'user', content: `Text: ${chunk}\n\nQuery: ${query}` },
         ],
-    max_tokens: 50
+        max_tokens: 50,
     });
 
     return completion.choices[0].message.content;
@@ -61,26 +81,36 @@ async function analyzeChunk(chunk, query) {
  * @returns {Promise<string>} - Summarized analysis
  */
 async function summarizeAnalyses(analyses, query) {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      {role: "system", content: "Summarize these analysis snippets very concisely, focusing on the most relevant information to the query."},
-      {role: "user", content: `Analyses:\n${analyses.join('\n')}\n\nQuery: ${query}`}
-    ],
-    max_tokens: 100
-  });
+    const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+            {
+                role: 'system',
+                content:
+                    'Summarize these analysis snippets very concisely, focusing on the most relevant information to the query.',
+            },
+            {
+                role: 'user',
+                content: `Analyses:\n${analyses.join('\n')}\n\nQuery: ${query}`,
+            },
+        ],
+        max_tokens: 100,
+    });
 
-  return completion.choices[0].message.content;
+    return completion.choices[0].message.content;
 }
 
 /**
  * Analyzes a document using OpenAI's GPT model with extreme chunking for very large documents.
- * @param {string} fileContent - The content of the uploaded document
+ * @param {Buffer} fileBuffer - The buffer containing the uploaded document
+ * @param {string} fileType - The MIME type of the uploaded file
  * @param {string} query - The user's query about the document
  * @returns {Promise<string>} - The AI-generated analysis result
  */
-const analyzeDocument = async (fileContent, query) => {
-  const cacheKey = `analysis:${Buffer.from(fileContent).toString('base64').slice(0, 20)}:${query}`;
+const analyzeDocument = async (fileBuffer, fileType, query) => {
+    const cacheKey = `analysis:${Buffer.from(fileBuffer)
+        .toString('base64')
+        .slice(0, 20)}:${query}`;
 
     try {
         // Check cache first
@@ -90,31 +120,39 @@ const analyzeDocument = async (fileContent, query) => {
             return cachedResult;
         }
 
-    const chunks = splitIntoChunks(fileContent);
-    let chunkAnalyses = [];
-    let finalSummaries = [];
+        let fileContent;
+        if (fileType === 'application/pdf') {
+            fileContent = await parsePDF(fileBuffer);
+        } else {
+            // Assume text file if not PDF
+            fileContent = fileBuffer.toString('utf-8');
+        }
+
+        const chunks = splitIntoChunks(fileContent);
+        let chunkAnalyses = [];
+        let finalSummaries = [];
 
         for (let i = 0; i < chunks.length; i++) {
-      const chunkAnalysis = await analyzeChunk(chunks[i], query);
-      chunkAnalyses.push(chunkAnalysis);
+            const chunkAnalysis = await analyzeChunk(chunks[i], query);
+            chunkAnalyses.push(chunkAnalysis);
 
-      // Summarize every 10 chunk analyses
-      if (chunkAnalyses.length === 10 || i === chunks.length - 1) {
-        const summary = await summarizeAnalyses(chunkAnalyses, query);
-        finalSummaries.push(summary);
-        chunkAnalyses = [];
+            // Summarize every 10 chunk analyses
+            if (chunkAnalyses.length === 10 || i === chunks.length - 1) {
+                const summary = await summarizeAnalyses(chunkAnalyses, query);
+                finalSummaries.push(summary);
+                chunkAnalyses = [];
             }
         }
 
-    // Final summary of all summaries
-    const result = await summarizeAnalyses(finalSummaries, query);
+        // Final summary of all summaries
+        const result = await summarizeAnalyses(finalSummaries, query);
 
         await setCachedValue(cacheKey, result);
 
         return result;
     } catch (error) {
-    console.error("Error in AI analysis:", error);
-    throw new Error("Failed to analyze document: " + error.message);
+        console.error('Error in AI analysis:', error);
+        throw new Error('Failed to analyze document: ' + error.message);
     }
 };
 
