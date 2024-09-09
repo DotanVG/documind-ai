@@ -1,39 +1,40 @@
 // middleware/fileUpload.js
-const multer = require('multer');
+const fs = require('fs').promises;
 const path = require('path');
+const multer = require('multer');
 
-/**
- * Filters files based on allowed types.
- * @param {Object} req - Express request object
- * @param {Object} file - File object from multer
- * @param {function} cb - Callback function
- */
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedTypes.includes(ext)) {
-        cb(null, true);
-    } else {
-        cb(
-            new Error(
-                'Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.'
-            )
-        );
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+
+const setupUploadDirectory = async () => {
+    try {
+        await fs.mkdir(uploadsDir, { recursive: true });
+    } catch (error) {
+        console.error('Error creating uploads directory:', error);
     }
 };
 
-/**
- * Creates and configures the multer middleware for file uploads.
- * @returns {function} Configured multer middleware
- */
-const createUploadMiddleware = () => {
-    return multer({
-        storage: multer.memoryStorage(), // Store file in memory as a Buffer
-        limits: {
-            fileSize: 10 * 1024 * 1024, // Limit file size to 10MB
-        },
-        fileFilter: fileFilter,
-    });
+const associateUploadsWithSession = (req, res, next) => {
+    req.session.uploadIds = req.session.uploadIds || [];
+    next();
 };
 
-module.exports = { createUploadMiddleware };
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (allowedTypes.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(
+                new Error(
+                    'Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.'
+                )
+            );
+        }
+    },
+});
+
+module.exports = { setupUploadDirectory, associateUploadsWithSession, upload };

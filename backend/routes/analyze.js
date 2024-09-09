@@ -2,10 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const { analyzeDocument } = require('../services/aiService');
+const { upload } = require('../middleware/fileUpload');
 
-router.post('/', async (req, res, next) => {
+router.post('/', upload.single('file'), async (req, res, next) => {
     try {
-        console.log('Received file:', req.file); // Log the entire file object
+        console.log('Received file:', req.file);
 
         if (!req.file || !req.file.buffer) {
             return res
