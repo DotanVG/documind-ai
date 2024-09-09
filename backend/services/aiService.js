@@ -3,6 +3,7 @@ const OpenAI = require('openai');
 const dotenv = require('dotenv');
 const { getCachedValue, setCachedValue } = require('./cacheService');
 const pdf = require('pdf-parse');
+const mammoth = require('mammoth');
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ async function parsePDF(pdfBuffer) {
 
 /**
  * Splits the document into very small chunks.
+ * @param {buffer} docxBuffer - The buffer containing the docx file
  * @param {string} text - The document text to split
  * @param {number} maxChars - Maximum number of characters per chunk
  * @returns {string[]} - Array of text chunks
@@ -57,6 +59,17 @@ function splitIntoChunks(text, maxChars = 500) {
  * @param {string} query - The user's query
  * @returns {Promise<string>} - The analysis result for the chunk
  */
+
+async function parseDocx(docxBuffer) {
+    try {
+        const result = await mammoth.extractRawText({ buffer: docxBuffer });
+        return result.value;
+    } catch (error) {
+        console.error('Error parsing DOCX:', error);
+        throw new Error('Failed to parse Word document');
+    }
+}
+
 async function analyzeChunk(chunk, query) {
     const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
@@ -123,8 +136,10 @@ const analyzeDocument = async (fileBuffer, fileType, query) => {
         let fileContent;
         if (fileType === 'application/pdf') {
             fileContent = await parsePDF(fileBuffer);
+        } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileType === 'application/msword') {
+            fileContent = await parseDocx(fileBuffer);
         } else {
-            // Assume text file if not PDF
+            // Assume text file if not PDF or Word
             fileContent = fileBuffer.toString('utf-8');
         }
 
