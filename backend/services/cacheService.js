@@ -29,39 +29,23 @@ const initializeRedisClient = async () => {
  * @returns {Promise<string|null>} - The cached value or null if not found
  */
 const getCachedValue = async (key) => {
-    try {
-        if (!client || !client.isOpen) {
-            await initializeRedisClient();
-        }
-        const value = await client.get(key);
-        return value ? JSON.parse(value) : null;
-    } catch (error) {
-        console.error('Redis get error:', error);
-        return null;
+    if (!client) {
+        throw new Error('Redis client not initialized');
     }
+    return client.get(key);
 };
 
 /**
- * Sets a value in the cache with an optional expiration.
+ * Sets a value in the cache.
  * @param {string} key - The cache key
- * @param {*} value - The value to cache
- * @param {number} [expireIn=3600] - Expiration time in seconds (default: 1 hour)
+ * @param {string} value - The value to cache
+ * @returns {Promise<void>}
  */
-const setCachedValue = async (key, value, expireIn = 3600) => {
-    try {
-        if (!client || !client.isOpen) {
-            await initializeRedisClient();
-        }
-        await client.set(key, JSON.stringify(value), {
-            EX: expireIn,
-            NX: true,
-        });
-    } catch (error) {
-        console.error('Redis set error:', error);
+const setCachedValue = async (key, value) => {
+    if (!client) {
+        throw new Error('Redis client not initialized');
     }
+    return client.set(key, value);
 };
-
-// Initialize the Redis client when this module is imported
-initializeRedisClient().catch(console.error);
 
 module.exports = { getCachedValue, setCachedValue, initializeRedisClient };
