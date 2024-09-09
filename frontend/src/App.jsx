@@ -123,12 +123,12 @@ function AnalysisInterface() {
 }
 
 export default function App() {
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false); 
 
   const wakeUpBackend = async () => {
     toast.info('Waking up the backend server...');
     try {
-      const response = await fetch(`${API_URL}/wake-up`);
+      const response = await fetch(`${API_URL}/wakeUp`);
       if (response.ok) {
         toast.success('Backend server is ready!');
       } else {

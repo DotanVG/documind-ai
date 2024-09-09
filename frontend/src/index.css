@@ -1,10 +1,28 @@
 /* Import Tailwind CSS */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* You can add any global styles here */
+/* Global styles */
 body {
   @apply min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(199, 210, 254, 0.3); /* Light indigo with transparency */
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b5cf6, #d946ef); /* Gradient from purple-500 to pink-500 */
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7c3aed, #db2777); /* Slightly darker gradient on hover */
 }

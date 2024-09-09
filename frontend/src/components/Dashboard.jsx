@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Search, Brain, BarChart, Shield, Zap, Upload } from 'lucide-react';
 
 function Dashboard() {
   const [file, setFile] = useState(null);

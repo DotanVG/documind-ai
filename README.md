@@ -22,7 +22,7 @@ DocuMind AI is an intelligent document analysis platform that combines file uplo
 
 ### 📋 Prerequisites
 
-- 🟢 Node.js (v14 or later)  
+- 🟢 Node.js
 - 📦 npm  
 - 🗄️ PostgreSQL  
 - 🧠 Redis  
