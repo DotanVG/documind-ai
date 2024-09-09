@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const db = require('./db');
+const { initializeRedisClient } = require('./services/cacheService');
 
 // Import routes
 const analyzeRouter = require('./routes/analyze');
@@ -37,13 +38,19 @@ app.use(errorHandler);
 
 let server;
 if (process.env.NODE_ENV !== 'test') {
-    server = app.listen(PORT, () => {
+    server = app.listen(PORT, async () => {
         console.log(`Server is running on port ${PORT}`);
+        try {
+            await initializeRedisClient();
+            console.log('Redis client initialized');
+        } catch (error) {
+            console.error('Failed to initialize Redis client:', error);
+        }
     });
 }
 
 // Function to close server and database connections
-const closeServer = () => {
+const closeServer = async () => {
     return new Promise((resolve) => {
         if (server) {
             server.close(() => {

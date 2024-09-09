@@ -65,6 +65,7 @@ function AnalysisInterface() {
       const data = await response.json();
       if (response.ok) {
         setResult(data.result);
+        toast.success('Analysis completed successfully');
       } else {
         toast.error(data.error || 'An error occurred during analysis');
       }
