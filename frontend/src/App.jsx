@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Search, Brain, BarChart, Shield, Zap, Upload } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';  
 
 const API_URL = 'http://localhost:3000/api';
+const WAKE_UP_INTERVAL = 10000; // 10 seconds
 
 function LandingPage({ onGetStarted }) {
   return (
@@ -167,33 +168,84 @@ function AnalysisInterface() {
 
 export default function App() {
   const [showAnalysis, setShowAnalysis] = useState(false); 
+  const [backendStatus, setBackendStatus] = useState('unknown');
+  const [shouldRetry, setShouldRetry] = useState(true);
 
-  const wakeUpBackend = async () => {
-    toast.info('Waking up the backend server...');
+  const wakeUpBackend = useCallback(async () => {
+    if (backendStatus === 'ready') {
+      setShouldRetry(false);
+      return;
+    }
+
+    setBackendStatus('waking');
+    toast.info('Attempting to connect to the backend server...', { toastId: 'wakeup-info' });
+
     try {
       const response = await fetch(`${API_URL}/wakeUp`);
       if (response.ok) {
-        toast.success('Backend server is ready!');
+        setBackendStatus('ready');
+        setShouldRetry(false);
+        toast.dismiss('wakeup-error');
+        toast.dismiss('wakeup-retry-info');
+        toast.success('Backend server is ready!', { toastId: 'wakeup-success' });
       } else {
-        toast.error('Failed to wake up the backend server');
+        throw new Error('Server responded with an error');
       }
     } catch (error) {
       console.error('Wake-up error:', error);
-      toast.error('Failed to connect to the backend server');
+      setBackendStatus('error');
+      toast.error('Failed to connect to the backend server', { toastId: 'wakeup-error' });
+      toast.info(
+        'Automatic retry will be attempted in a few seconds. Please refresh the page and try again later.',
+        { toastId: 'wakeup-retry-info', autoClose: WAKE_UP_INTERVAL }
+      );
     }
-  };
+  }, [backendStatus]);
 
-  useEffect(() => {
-    wakeUpBackend();
-  }, []);
+useEffect(() => {
+  let timeoutId = null;
+
+const attemptWakeUp = () => {
+  wakeUpBackend();
+  if (shouldRetry) {
+    timeoutId = setTimeout(() => {
+      if (shouldRetry) {
+        attemptWakeUp();
+      }
+    }, WAKE_UP_INTERVAL);
+  }
+};
+
+  if (shouldRetry) {
+    attemptWakeUp();
+  }
+
+  return () => {
+    clearTimeout(timeoutId); // clear the timeout when the component unmounts
+  };
+}, [shouldRetry, wakeUpBackend]); // add shouldRetry and wakeUpBackend as dependencies
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
       <Navbar onHome={() => setShowAnalysis(false)} />
       <div className="flex-grow">
-        {showAnalysis ? <AnalysisInterface /> : <LandingPage onGetStarted={() => setShowAnalysis(true)} />}
+        {showAnalysis ? (
+          <AnalysisInterface />
+        ) : (
+          <LandingPage onGetStarted={() => setShowAnalysis(true)} />
+        )}
       </div>
-      <ToastContainer position="bottom-right" />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 }
