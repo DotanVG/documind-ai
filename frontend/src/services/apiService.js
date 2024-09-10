@@ -16,6 +16,14 @@ export const analyzeDocument = async (file, query) => {
         const response = await axios.post(`${API_URL}/analyze`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
+                'Access-Control-Allow-Origin': 'https://documind-ai-dotanv.netlify.app/',
+            },
+            
+            onUploadProgress: (progressEvent) => {
+                const percentCompleted = Math.round(
+                    (progressEvent.loaded * 100) / progressEvent.total
+                );
+                console.log(percentCompleted);
             },
         });
         return response.data.result;
