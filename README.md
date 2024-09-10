@@ -10,6 +10,9 @@ This project was developed as part of a follow-up on an interview home assignmen
 
 🔗 [Live Demo (Frontend)](https://documind-ai-dotanv.netlify.app/)
 🔗 [API Endpoint](https://documind-ai.onrender.com)
+🎥 [YouTube Demo](https://www.youtube.com/watch?v=pcVU-uGVwL4)
+
+![DocuMind AI Demo](/frontend/public/documind-ai-demo.gif)
 
 ## 🌿 Branches
 
