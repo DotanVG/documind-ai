@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart, Search, Brain, Zap, Upload } from 'lucide-react';
+import { BarChart, Search, Brain, Zap, Upload, Copy } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { analyzeDocument } from '../services/apiService';
 
@@ -119,7 +119,7 @@ const AnalysisInterface = () => {
                     key={index}
                     className="mt-8 bg-white bg-opacity-20 p-6 rounded-lg relative"
                 >
-                    <h3 className="text-2xl font-semibold mb-4">
+                    <h3 className="text-2xl font-semibold mb-4 mt-10">
                         Analysis Result
                     </h3>
                     <p className="text-sm text-gray-300 mb-2">
@@ -128,12 +128,13 @@ const AnalysisInterface = () => {
                     </p>
                     <p>{result.result}</p>
                     <button
-                        className="absolute top-4 right-4 bg-purple-600 text-white px-2 py-1 rounded font-semibold hover:bg-purple-700 transition"
+                        className="absolute top-4 right-4 flex items-center bg-purple-600 text-white px-2 py-1 rounded font-semibold hover:bg-purple-700 transition"
                         onClick={() => {
-                            navigator.clipboard.writeText(result.result)
+                            navigator.clipboard.writeText(result.result);
                             toast.success('Copied response to clipboard');
                         }}
                     >
+                        <Copy className="h-4 w-4 mr-2" />
                         Copy Response
                     </button>
                 </div>
